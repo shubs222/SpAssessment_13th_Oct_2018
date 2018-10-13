@@ -27,3 +27,5 @@ D:\My Tasks\SPAssessment\SPAssessment\bin\Debug\System.IO.FileSystem.Primitives.
 D:\My Tasks\SPAssessment\SPAssessment\bin\Debug\System.IO.Packaging.dll
 D:\My Tasks\SPAssessment\SPAssessment\bin\Debug\EPPlus.xml
 D:\My Tasks\SPAssessment\SPAssessment\bin\Debug\OfficeOpenXml.Core.ExcelPackage.pdb
+D:\My Tasks\SPAssessment\SPAssessment\bin\Debug\Bytescout.Spreadsheet.dll
+D:\My Tasks\SPAssessment\SPAssessment\bin\Debug\Bytescout.Spreadsheet.xml
