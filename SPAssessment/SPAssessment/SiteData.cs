@@ -150,12 +150,18 @@ namespace SPAssessment
                                 foreach (var cell in wsRow)
                                 {
                                     if (null != cell.Hyperlink)
+                                    {
                                         row[cell.Start.Column - 1] = cell.Hyperlink;
+                                        items.Add(cell.Hyperlink.ToString());
+                                    }
                                     else
+                                    {
                                         row[cell.Start.Column - 1] = cell.Text;
+                                        items.Add(cell.Text);
+                                    }
                                 }
                                 tbl.Rows.Add(row);
-                                items.Add(row.ToString());
+                                
                             }
                             Console.WriteLine('1');
 
@@ -171,6 +177,78 @@ namespace SPAssessment
 
             }
         }
-       
+        public void UploadData(string Url, string UserName, SecureString passwrd)
+        {
+            using (clientcntx = new ClientContext(Url))
+            {
+                clientcntx.Credentials = new SharePointOnlineCredentials(UserName, passwrd);
+                List list = clientcntx.Web.Lists.GetByTitle("Documents");
+               
+                for (int FPitems = 0; FPitems < items.Count; FPitems+=4)
+                {
+                    FileCreationInformation fcinfo = new FileCreationInformation();
+                    string whole = items[FPitems];
+                    string [] splitwhole = whole.Split(Convert.ToChar(92));
+                    string last = splitwhole[splitwhole.Length - 1];
+                    fcinfo.Url = last;
+                    string path = items[FPitems];
+                    fcinfo.Content = System.IO.File.ReadAllBytes(path);
+                    fcinfo.Overwrite = true;
+                    
+
+                    File fileToUpload = list.RootFolder.Files.Add(fcinfo);
+                    clientcntx.Load(list);
+                    clientcntx.ExecuteQuery();
+                    ListItemCreationInformation itemCreationInformation = new ListItemCreationInformation();
+                    ListItem li = list.AddItem(itemCreationInformation);
+                    li["FileCreatedBy"] = items[FPitems + 2];
+
+                    li.Update();
+                    clientcntx.ExecuteQuery();
+                    CreatdBy();
+                }
+
+
+            }
+        }
+
+        public void CreatdBy()
+        {
+            for (int authercount = 2; authercount < items.Count; authercount+=4)
+            {
+                List list = clientcntx.Web.Lists.GetByTitle("Documents");
+                //ListItemCreationInformation itemCreationInformation = new ListItemCreationInformation();
+                //FileCollection fc = list.AddItem(itemCreationInformation);
+                //li["FileCreatedBy"] = items[authercount];
+
+                //li.Update();
+                //clientcntx.ExecuteQuery();
+
+                var creationInformation = new ListItemCreationInformation();
+                Microsoft.SharePoint.Client.ListItem listItem = list.AddItem(creationInformation);
+                listItem.FieldValues["FileCreatedBy"] =  items[authercount];
+                listItem.Update();
+                clientcntx.ExecuteQuery();
+
+            }
+        }
+
+        //public void UploadFile(string url, string Username, SecureString password)
+        //{
+        //    using (clientcntx = new ClientContext(url))
+        //    {
+        //        clientcntx.Credentials = new SharePointOnlineCredentials(Username, password);
+        //        List list = clientcntx.Web.Lists.GetByTitle("MyDocuments");
+        //        FileCreationInformation fcinfo = new FileCreationInformation();
+        //        fcinfo.Url = "MyDocuments/NewFiles/Products1.txt";
+        //        fcinfo.Content = System.IO.File.ReadAllBytes(@"D:\My Tasks\SharePointPractice\A_8th_Oct2018\Products1.txt");
+        //        fcinfo.Overwrite = true;
+        //        File fileToUpload = list.RootFolder.Files.Add(fcinfo);
+        //        clientcntx.Load(list);
+        //        clientcntx.ExecuteQuery();
+        //        Console.WriteLine("Name is : " + fcinfo.Content);
+        //    }
+        //}
+
     }
 }
