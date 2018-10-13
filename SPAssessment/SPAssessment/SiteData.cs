@@ -7,6 +7,7 @@ using System.Security;
 using Microsoft.SharePoint.Client;
 using System.Data;
 using Microsoft.Office.SharePoint;
+using Excel = Microsoft.Office.Interop.Excel;
 using Bytescout.Spreadsheet;
 using System.Diagnostics;
 namespace SPAssessment
@@ -19,6 +20,11 @@ namespace SPAssessment
         List<string> headers = new List<string>();
         List<string> items = new List<string>();
         DataTable tbl;
+
+        private static Excel.Workbook MyBook = null;
+        private static Excel.Application MyApp = null;
+        private static Excel.Worksheet MySheet = null;
+
         public void GetSiteData(string Url, string UserName, SecureString passwrd)
         {
             using (clientcntx = new ClientContext(Url))
@@ -66,49 +72,28 @@ namespace SPAssessment
 
         public void GetFilePath(string Url, string UserName, SecureString passwrd)
         {
-            //using (clientcntx = new ClientContext(Url))
-            //{
-            //    clientcntx.Credentials = new SharePointOnlineCredentials(UserName, passwrd);
-            //    File paths = GetDocument(Url, UserName, passwrd);
-            //    FileInformation information = File.OpenBinaryDirect(clientcntx,paths.ServerRelativeUrl);
-            //    //using (System.IO.StreamReader sr = new System.IO.StreamReader(information.Stream))
-            //    //{
-            //    //    // Read the stream to a string, and write the string to the console.
-            //    //   String line = sr.ReadToEnd();
-            //    //    Console.WriteLine("data: "+line);
-            //    //}
-
-
-            //    System.IO.Stream stream = information.Stream;
-
-            //    using (System.IO.StreamReader sr = new System.IO.StreamReader(stream))
-            //    {
-            //        while (sr.Peek() >= 0)
-            //        {
-            //            Console.WriteLine(sr.ReadLine());
-            //        }
-            //    }
-            //}
-
             using (clientcntx = new ClientContext(Url))
             {
                 clientcntx.Credentials = new SharePointOnlineCredentials(UserName, passwrd);
                 List list = clientcntx.Web.Lists.GetByTitle("MyDocuments");
                 string fileurl = Url + "/_layouts/15/Doc.aspx?sourcedoc=%7Bd9f22086-cf2d-481a-8d1e-b03fd52ceda7%7D&action=default&uid=%7BD9F22086-CF2D-481A-8D1E-B03FD52CEDA7%7D&ListItemId=5&ListId=%7B3411566D-3EE6-4CB3-9DD4-71B1E7E0AAB3%7D&odsp=1&env=prod";
-              
+
                 File file = clientcntx.Web.GetFileByUrl(fileurl);
                 ClientResult<System.IO.Stream> data = file.OpenBinaryStream();
-                
-                Spreadsheet myfile = new Spreadsheet();
-                Microsoft.Office.Interop.Excel.Worksheet Sheet = (Microsoft.Office.Interop.Excel.Worksheet)myfile.Workbook.Worksheets.Add(@"D:\FilePathExcelFile");
+
+                //Spreadsheet myfile = new Spreadsheet();
+                //Worksheet Sheet = myfile.Workbook.Worksheets.Add(@"D:\FilePathExcelFile.xlsx");
+                MyApp = new Excel.Application();
+                MyApp.Visible = false;
+                MyBook = MyApp.Workbooks.Open(@"D:\FilePathExcelFile.xlsx");
+                MySheet = (Excel.Worksheet)MyBook.Sheets[1]; // Explicit cast is not required here
+                //lastRow = MySheet.Cells.SpecialCells(Excel.XlCellType.xlCellTypeLastCell).Row;
+
+
                 clientcntx.Load(file);
                 clientcntx.ExecuteQuery();
                 using (var pck = new OfficeOpenXml.ExcelPackage())
-                {   
-                    //using (var stream = File.OpenRead(""))
-                    //{
-                    //    pck.Load(stream);
-                    //}
+                {
                     using (System.IO.MemoryStream mStream = new System.IO.MemoryStream())
                     {
                         if (data != null)
@@ -130,46 +115,46 @@ namespace SPAssessment
                                 var row = tbl.NewRow();
                                 int count = rowNum;
                                 bool status = false;
+                                int cellCount = 0;
                                 foreach (var cell in wsRow)
                                 {
-
                                     if (null != cell.Hyperlink)
                                     {
                                         row[cell.Start.Column - 1] = cell.Hyperlink;
                                         items.Add(cell.Hyperlink.ToString());
-                                        status=UploadFile(cell.Hyperlink.ToString(), cell.Address);
+                                        status = UploadFile(cell.Hyperlink.ToString(), cell.Address);
                                     }
                                     else
                                     {
                                         row[cell.Start.Column - 1] = cell.Text;
                                         items.Add(cell.Text);
-                                        status=UploadFile(cell.Text, cell.Address);
-                                    }
-                                    if (cell.Address.StartsWith("E") && status)
-                                    {
-                                        Sheet.Rows[cell] = "Success";
-                                    }
-                                    if(cell.Address.StartsWith("E") && status==false)
-                                    {
-                                        Sheet.Rows[cell] = "failed";
+                                        status = UploadFile(cell.Text, cell.Address);
                                     }
 
+                                    if (status)
+                                    {
+                                        //string dataresult = "Success";
+                                        MySheet.Cells["E"] = "Success";
+                                        MyBook.Save();
+                                    }
+                                    else
+                                    {
+                                        //Sheet.Rows[cell] = "failed";
+                                        MySheet.Cells["E"] = "Failed";
+                                        MyBook.Save();
+                                       
+                                    }
+                                    cellCount++;
                                 }
                                 tbl.Rows.Add(row);
-
                             }
                             Console.WriteLine('1');
-
                         }
                     }
-
-
-
                 }
-
+                MyBook.Close();
                 Console.WriteLine("Done");
                 Console.ReadKey();
-
             }
         }
         FileCreationInformation fcinfo;
@@ -179,9 +164,6 @@ namespace SPAssessment
         {
             List list = clientcntx.Web.Lists.GetByTitle("MyDocuments");
 
-
-
-           
             if (Column.StartsWith("A"))
             {
                 System.IO.FileInfo fi = new System.IO.FileInfo(text);
@@ -202,21 +184,22 @@ namespace SPAssessment
                     status = true;
                     ListItem li = fileToUpload.ListItemAllFields;
                     li["File_Type"] = System.IO.Path.GetExtension(text);
+                    li.Update();
                     return true;
                 }
                 else
                 {
                     Console.WriteLine("Error file size is more than 15mb");
                     status = false;
-                    
                 }
             }
             if (Column.StartsWith("C") && status)
             {
                 ListItem li = fileToUpload.ListItemAllFields;
                 li["FileCreatedBy"] = text;
+                li.Update();
+                clientcntx.ExecuteQuery();
                 status = true;
-                
             }
             return status;
         }
@@ -243,6 +226,24 @@ namespace SPAssessment
                 }
             }
         }
+        
+        //int lastRow;
+        //public void UpdateExcelData()
+        //{
+
+        //        MyApp = new Excel.Application();
+        //        MyApp.Visible = false;
+        //        MyBook = MyApp.Workbooks.Open(@"D:\FilePathExcelFile.xlsx");
+        //        MySheet = (Excel.Worksheet)MyBook.Sheets[1]; // Explicit cast is not required here
+        //        lastRow = MySheet.Cells.SpecialCells(Excel.XlCellType.xlCellTypeLastCell).Row;
+        //    MySheet.Cells[lastRow, 1] = emp.Name;
+
+        //}
+        
+  
+    }
+}
+
 
 
 
@@ -389,5 +390,3 @@ namespace SPAssessment
 
         //}
 
-    }
-}
