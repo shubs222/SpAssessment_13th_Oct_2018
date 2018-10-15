@@ -9,41 +9,23 @@ namespace SPAssessment
 {
     class Program
     {
-        static string UserName;
-        static SecureString passwrd;
-        public static void Getdata()
-        {
-            //Console.WriteLine("Enter user name");
-            UserName = "arvind.torvi@acuvate.com";
-            Console.WriteLine("Enter password");
-            passwrd = GetPassword();
-
-        }
-        private static SecureString GetPassword()
-        {
-            ConsoleKeyInfo info;
-            //Get the user's password as a SecureString  
-            SecureString securePassword = new SecureString();
-            do
-            {
-                info = Console.ReadKey(true);
-                if (info.Key != ConsoleKey.Enter)
-                {
-                    securePassword.AppendChar(info.KeyChar);
-                }
-            }
-            while (info.Key != ConsoleKey.Enter);
-            return securePassword;
-        }
-
+        static bool LoginStatus;
         static void Main(string[] args)
         {
-            Getdata();
+            UserCredentials.Getdata();
             string Url = "https://acuvatehyd.sharepoint.com/teams/shubhamtrial";
             SiteData sitedata = new SiteData();
-            sitedata.GetSiteData(Url,UserName,passwrd);
-            //sitedata.GetDocument(Url, UserName, passwrd);
-            sitedata.GetFilePath(Url, UserName, passwrd);
+            LoginStatus=sitedata.GetSiteData(Url);
+            if (LoginStatus == true)
+            {
+                sitedata.DownloadFile(Url);
+                sitedata.GetDocumentData(Url);
+                //sitedata.UploadData(Url, UserName, passwrd);
+            }
+            else
+            {
+                Main(args);
+            }
             Console.ReadKey();
         }
     }
