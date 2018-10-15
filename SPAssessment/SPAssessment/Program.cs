@@ -43,8 +43,11 @@ namespace SPAssessment
             SiteData sitedata = new SiteData();
             sitedata.GetSiteData(Url,UserName,passwrd);
             //sitedata.GetDocument(Url, UserName, passwrd);
-            sitedata.GetFilePath(Url, UserName, passwrd);
+             sitedata.DownloadFile(Url, UserName, passwrd);
+            sitedata.GetDocumentData(Url, UserName, passwrd);
+            //sitedata.UploadData(Url, UserName, passwrd);
             Console.ReadKey();
+            
         }
     }
 }
